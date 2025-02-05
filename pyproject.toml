@@ -11,6 +11,7 @@ dependencies = [
     "django (>=5.1.5,<6.0.0)",
     "psycopg2-binary (>=2.9.10,<3.0.0)",
     "djangorestframework (>=3.15.2,<4.0.0)",
+    "django-filter (>=24.3,<25.0)",
 ]
 
 
@@ -28,7 +29,7 @@ django-extensions = "^3.2.3"
 
 
 [tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "config.settings"
+DJANGO_SETTINGS_MODULE = "config.settings.development"
 python_files = ["test_*.py"]
 addopts = [
     "-vv", 

@@ -4,9 +4,11 @@ import typing as tp
 
 from app.core.types import ErrorDetails
 
-from django.shortcuts import get_object_or_404
 
 class APIError(Exception):
+    STATUS_CODE = 500
+    DETAILS = 'A server error occurred.'
+
     def __init__(
         self,
         *,
@@ -14,14 +16,35 @@ class APIError(Exception):
         details: ErrorDetails | None = None,
     ) -> None:
         super().__init__(details)
-        self.status_code = status_code
-        self.details = details or 'A server error occurred.'
+        self.status_code = status_code or self.STATUS_CODE
+        self.details = details or self.DETAILS
 
 
 class ObjectDoesNotExist(APIError):
-    DETAILS = 'Object does not exist.'
     STATUS_CODE = 404
+    DETAILS = 'Object does not exist.'
 
     @tp.override
-    def __init__(self, details: ErrorDetails | None = None,) -> None:
-        super().__init__(status_code=self.STATUS_CODE, details=self.DETAILS)
+    def __init__(
+        self,
+        details: ErrorDetails | None = None,
+    ) -> None:
+        super().__init__(
+            status_code=self.STATUS_CODE,
+            details=details or self.DETAILS,
+        )
+
+
+class ValidationError(APIError):
+    STATUS_CODE = 400
+    
+    @tp.override
+    def __init__(
+        self,
+        details: tp.Mapping[str, tp.Any],
+    ) -> None:
+        super().__init__(
+            status_code=self.STATUS_CODE,
+            details=details,
+        )
+        

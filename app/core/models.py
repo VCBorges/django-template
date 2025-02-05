@@ -3,23 +3,6 @@ import uuid
 from django.db import models
 
 
-class CleanOnSaveMixin:
-    def save(
-        self,
-        force_insert: bool | None = False,
-        force_update: bool | None = False,
-        using=None,
-        update_fields: list[str] | None = None,
-    ) -> None:
-        self.full_clean()
-        return super().save(
-            force_insert=force_insert,
-            force_update=force_update,
-            using=using,
-            update_fields=update_fields,
-        )
-
-
 class BaseModel(models.Model):
     id = models.UUIDField(
         primary_key=True,

@@ -7,16 +7,16 @@ from django.db.models.query import QuerySet
 from app.core.exceptions import ObjectDoesNotExist
 
 if TYPE_CHECKING:
-    from app.core.types import DjangoModelType
+    from app.core.types import DjangoModel
 
 
 def get_object_or_404(
-    model_or_queryset: type[DjangoModelType] | QuerySet[DjangoModelType],
+    model_or_queryset: type[DjangoModel] | QuerySet[DjangoModel],
     *,
     pk: str,
     error_details: str | None = None,
-) -> DjangoModelType:
-    if issubclass(model_or_queryset, DjangoModelType):
+) -> DjangoModel:
+    if issubclass(model_or_queryset, DjangoModel):
         model_or_queryset = model_or_queryset.objects.all()
     try:
         return model_or_queryset.get(pk=pk)

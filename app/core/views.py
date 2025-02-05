@@ -6,6 +6,7 @@ import typing as tp
 from typing import Any, Literal, Mapping
 
 from django.db.models.query import QuerySet
+from django.forms import ValidationError as DjangoValidationError
 from django.http import HttpRequest, JsonResponse, QueryDict
 from django.template.response import TemplateResponse
 from django.utils.decorators import method_decorator
@@ -13,9 +14,10 @@ from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
 from app.core.exceptions import APIError
-from app.core.types import DjangoModelType, DRFSerializer
+from app.core.types import DjangoModel, DRFSerializer
+from app.core.utils import get_object_or_404
 
-from apps.core.utils import get_or_404
+from rest_framework.exceptions import ValidationError as DRFValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -27,9 +29,9 @@ Response = JsonResponse | TemplateResponse
 class APIView(View):
     http_method_names: list[HTTPMethod] = []
     request: HttpRequest
-    model: type[DjangoModelType] | None = None
-    queryset: QuerySet[DjangoModelType] | None = None
-    object: DjangoModelType | None = None
+    model: type[DjangoModel] | None = None
+    queryset: QuerySet[DjangoModel] | None = None
+    object: DjangoModel | None = None
     data: Mapping[str, Any] | QueryDict
     pk_url_kwarg = 'pk'
     kwargs: dict[str, Any]
@@ -40,7 +42,7 @@ class APIView(View):
             return {}
 
         try:
-            data = json.loads(self.request.body.decode('utf-8'))
+            data = json.loads(self.request.body.decode())
             return data
 
         except json.JSONDecodeError as error:
@@ -50,7 +52,7 @@ class APIView(View):
                 details=self._error_dict(str(error)),
             )
 
-    def get_validated_input(
+    def get_validated_body(
         self,
         serializer_class: type[DRFSerializer],
     ) -> dict[str, Any]:
@@ -58,12 +60,20 @@ class APIView(View):
         serializer.is_valid(raise_exception=True)
         return serializer.validated_data
 
+    def get_serialized_queryset(
+        self,
+        serializer_class: type[DRFSerializer],
+        queryset: QuerySet[DjangoModel],
+    ) -> dict[str, Any]:
+        serializer = serializer_class(queryset, many=True)
+        return serializer.data
+
     def _get_request_data(self) -> Mapping[str, tp.Any] | QueryDict:
         if self.request.method in [
             'GET',
-            'POST',
+            'HEAD',
         ]:
-            return getattr(self.request, self.request.method)
+            return self.request.GET
 
         if self.request.content_type == 'application/json':
             return self._parse_json_body()
@@ -71,9 +81,9 @@ class APIView(View):
         return self.request.POST | self.request.FILES
 
     @tp.override
-    def get_object(self) -> DjangoModelType | None:
+    def get_object(self) -> DjangoModel | None:
         if self.queryset or self.model:
-            return get_or_404(
+            return get_object_or_404(
                 self.queryset or self.model,
                 pk=self.kwargs.get(self.pk_url_kwarg),
             )
@@ -90,18 +100,33 @@ class APIView(View):
     def dispatch(self, *args: Any, **kwargs: Any) -> JsonResponse:
         try:
             response = super().dispatch(*args, **kwargs)
-        except Exception as error:
-            response = self.handle_exception(error)
+        except Exception as exc:
+            response = self.handle_exception(exc)
         return response
 
-    # TODO: Handle DRF Serializer Validation Error
     def handle_exception(self, exception: Exception) -> JsonResponse:
         if isinstance(exception, APIError):
             return self.render_to_json(
                 status_code=exception.status_code,
                 data=self._error_dict(exception.details),
             )
-        return self.render_to_json(status_code=500)
+
+        if isinstance(exception, DjangoValidationError):
+            return self.render_to_json(
+                status_code=400,
+                data=self._error_dict(exception.error_dict),
+            )
+
+        if isinstance(exception, DRFValidationError):
+            return self.render_to_json(
+                status_code=400,
+                data=self._error_dict(exception.error_dict),
+            )
+
+        return self.render_to_json(
+            status_code=500,
+            data=self._error_dict('Server error ocurred.'),
+        )
 
     def render_to_json(
         self,
