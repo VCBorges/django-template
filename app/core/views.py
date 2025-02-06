@@ -3,7 +3,6 @@ from __future__ import annotations, unicode_literals
 import json
 import logging
 import typing as tp
-from typing import Any, Literal, Mapping
 
 from django.db.models.query import QuerySet
 from django.forms import ValidationError as DjangoValidationError
@@ -13,31 +12,32 @@ from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
-from app.core.exceptions import APIError
-from app.core.types import DjangoModel, DRFSerializer
+from app.core.exceptions import APIError, ValidationError
+from app.core.types import DjangoFilter, DjangoModel, DRFSerializer
 from app.core.utils import get_object_or_404
 
 from rest_framework.exceptions import ValidationError as DRFValidationError
 
 logger = logging.getLogger(__name__)
 
-HTTPMethod = Literal['post', 'get', 'put', 'delete']
+HTTPMethod = tp.Literal['post', 'get', 'put', 'delete']
 
 Response = JsonResponse | TemplateResponse
 
 
 class APIView(View):
     http_method_names: list[HTTPMethod] = []
-    request: HttpRequest
     model: type[DjangoModel] | None = None
     queryset: QuerySet[DjangoModel] | None = None
-    object: DjangoModel | None = None
-    data: Mapping[str, Any] | QueryDict
     pk_url_kwarg = 'pk'
-    kwargs: dict[str, Any]
     template_engine: str = 'django'
 
-    def _parse_json_body(self) -> dict[str, tp.Any]:
+    request: HttpRequest
+    object: DjangoModel | None = None
+    data: tp.Mapping[str, tp.Any] | QueryDict
+    kwargs: tp.Mapping[str, tp.Any]
+
+    def parse_json_body(self) -> dict[str, tp.Any]:
         if self.request.body == b'':
             return {}
 
@@ -49,26 +49,43 @@ class APIView(View):
             logger.exception(error)
             raise APIError(
                 status_code=400,
-                details=self._error_dict(str(error)),
+                details=self.error_dict(str(error)),
             )
 
     def get_validated_body(
         self,
         serializer_class: type[DRFSerializer],
-    ) -> dict[str, Any]:
+    ) -> dict[str, tp.Any]:
         serializer = serializer_class(data=self.data)
-        serializer.is_valid(raise_exception=True)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except DRFValidationError as error:
+            logger.exception(error)
+            raise ValidationError(error.detail)
+
         return serializer.validated_data
 
     def get_serialized_queryset(
         self,
         serializer_class: type[DRFSerializer],
         queryset: QuerySet[DjangoModel],
-    ) -> dict[str, Any]:
+    ) -> dict[str, tp.Any]:
         serializer = serializer_class(queryset, many=True)
         return serializer.data
 
-    def _get_request_data(self) -> Mapping[str, tp.Any] | QueryDict:
+    def get_filtered_queryset(
+        self,
+        filter_class: type[DjangoFilter],
+        queryset: QuerySet[DjangoFilter],
+    ) -> QuerySet[DjangoModel]:
+        filter = filter_class(
+            data=self.data,
+            queryset=queryset,
+        )
+        filter.is_valid(raise_exception=True)
+        return filter.qs
+
+    def get_request_data(self) -> tp.Mapping[str, tp.Any] | QueryDict:
         if self.request.method in [
             'GET',
             'HEAD',
@@ -76,7 +93,7 @@ class APIView(View):
             return self.request.GET
 
         if self.request.content_type == 'application/json':
-            return self._parse_json_body()
+            return self.parse_json_body()
 
         return self.request.POST | self.request.FILES
 
@@ -91,14 +108,10 @@ class APIView(View):
         return None
 
     @tp.override
-    def setup(self, request: HttpRequest, *args, **kwargs):
-        super().setup(request, *args, **kwargs)
-        self.data = self._get_request_data()
-        self.object = self.get_object()
-
-    @tp.override
-    def dispatch(self, *args: Any, **kwargs: Any) -> JsonResponse:
+    def dispatch(self, *args: tp.Any, **kwargs: tp.Any) -> JsonResponse:
         try:
+            self.data = self.get_request_data()
+            self.object = self.get_object()
             response = super().dispatch(*args, **kwargs)
         except Exception as exc:
             response = self.handle_exception(exc)
@@ -108,30 +121,30 @@ class APIView(View):
         if isinstance(exception, APIError):
             return self.render_to_json(
                 status_code=exception.status_code,
-                data=self._error_dict(exception.details),
+                data=self.error_dict(exception.details),
             )
 
         if isinstance(exception, DjangoValidationError):
             return self.render_to_json(
                 status_code=400,
-                data=self._error_dict(exception.error_dict),
+                data=self.error_dict(exception.error_dict),
             )
 
         if isinstance(exception, DRFValidationError):
             return self.render_to_json(
                 status_code=400,
-                data=self._error_dict(exception.error_dict),
+                data=self.error_dict(exception.detail),
             )
 
         return self.render_to_json(
             status_code=500,
-            data=self._error_dict('Server error ocurred.'),
+            data=self.error_dict('Server error ocurred.'),
         )
 
     def render_to_json(
         self,
         *,
-        data: dict[str, Any] | None = None,
+        data: dict[str, tp.Any] | None = None,
         status_code: int = 200,
     ) -> JsonResponse:
         if data is None:
@@ -143,16 +156,16 @@ class APIView(View):
             json_dumps_params={'ensure_ascii': False},
         )
 
-    def _error_dict(
+    def error_dict(
         self,
-        details: Mapping[str, tp.Any] | str,
+        details: tp.Mapping[str, tp.Any] | str,
     ) -> dict[str, tp.Any]:
         return {'errors': details}
 
     def render_to_template(
         self,
         template: str,
-        context: dict[str, Any] | None = None,
+        context: dict[str, tp.Any] | None = None,
         status_code: int = 200,
         **response_kwargs,
     ) -> TemplateResponse:
@@ -169,7 +182,7 @@ class APIView(View):
             **response_kwargs,
         )
 
-    def get_context_data(self, **kwargs) -> dict[str, Any]:
+    def get_context_data(self, **kwargs) -> dict[str, tp.Any]:
         kwargs.setdefault('view', self)
         return kwargs
 
