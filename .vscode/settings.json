@@ -1,3 +1,8 @@
 {
-    "mypy.enabled": false
+    "mypy.enabled": false,
+    // "http.proxyStrictSSL": false,
+    // "github.copilot.advanced": {
+    //     "network.disableCertificateVerification": true
+    // },
+    "win-ca.inject": "append"
 }

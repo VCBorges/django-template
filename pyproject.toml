@@ -3,15 +3,17 @@ name = "django-project"
 version = "0.1.0"
 description = ""
 authors = [
-    {name = "Vinicius Borges",email = "vinicius.borges@ericsson.com"}
+    {name = "Vinicius Borges",email = "vinicius.costa.borges98@gmail.com"}
 ]
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.12,<4"
 dependencies = [
     "django (>=5.1.5,<6.0.0)",
     "psycopg2-binary (>=2.9.10,<3.0.0)",
     "djangorestframework (>=3.15.2,<4.0.0)",
     "django-filter (>=24.3,<25.0)",
+    "django-allauth (>=65.4.1,<66.0.0)",
+    "django-cotton (>=1.6.0,<2.0.0)",
 ]
 
 

@@ -16,8 +16,6 @@ class User(
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     joined_at = models.DateTimeField(auto_now_add=True)
-    height = models.IntegerField(_('height'), blank=True, null=True)
-    weight = models.IntegerField(_('weight'), blank=True, null=True)
 
     class Meta:
         verbose_name = _('user')
@@ -26,7 +24,6 @@ class User(
 
     USERNAME_FIELD = 'email'
     EMAIL_FIELD = 'email'
-    REQUIRED_FIELDS = ['email']
 
     objects: UsersManager = UsersManager()
 

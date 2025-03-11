@@ -9,14 +9,13 @@ from app.core.filters import BaseFilterSet
 from app.core.serializers import BaseSerializer
 from app.users.models import User
 
-DjangoModel = tp.TypeVar('DjangoModelType', bound=Model)
+DjangoModelType = tp.TypeVar('DjangoModelType', bound=Model)
 
-DRFSerializer = tp.TypeVar('DRFSerializerType', bound=BaseSerializer)
+DRFSerializerType = tp.TypeVar('DRFSerializerType', bound=BaseSerializer)
 
 ErrorDetails = dict[str, tp.Any] | str | list[tp.Any]
 
-DjangoFilter = tp.TypeVar('DjangoFilter', bound=BaseFilterSet)
-
+DjangoFilterType = tp.TypeVar('DjangoFilterType', bound=BaseFilterSet)
 
 class AuthenticatedRequest(HttpRequest):
     user: User

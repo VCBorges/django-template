@@ -13,7 +13,7 @@ from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
 from app.core.exceptions import APIError, ValidationError
-from app.core.types import DjangoFilter, DjangoModel, DRFSerializer
+from app.core.types import DjangoFilterType, DjangoModelType, DRFSerializerType
 from app.core.utils import get_object_or_404
 
 from rest_framework.exceptions import ValidationError as DRFValidationError
@@ -24,16 +24,18 @@ HTTPMethod = tp.Literal['post', 'get', 'put', 'delete']
 
 Response = JsonResponse | TemplateResponse
 
+# class TemplateView
+
 
 class APIView(View):
     http_method_names: list[HTTPMethod] = []
-    model: type[DjangoModel] | None = None
-    queryset: QuerySet[DjangoModel] | None = None
+    model: type[DjangoModelType] | None = None
+    queryset: QuerySet[DjangoModelType] | None = None
     pk_url_kwarg = 'pk'
     template_engine: str = 'django'
 
     request: HttpRequest
-    object: DjangoModel | None = None
+    object: DjangoModelType | None = None
     data: tp.Mapping[str, tp.Any] | QueryDict
     kwargs: tp.Mapping[str, tp.Any]
 
@@ -54,7 +56,7 @@ class APIView(View):
 
     def get_validated_body(
         self,
-        serializer_class: type[DRFSerializer],
+        serializer_class: type[DRFSerializerType],
     ) -> dict[str, tp.Any]:
         serializer = serializer_class(data=self.data)
         try:
@@ -67,17 +69,17 @@ class APIView(View):
 
     def get_serialized_queryset(
         self,
-        serializer_class: type[DRFSerializer],
-        queryset: QuerySet[DjangoModel],
+        serializer_class: type[DRFSerializerType],
+        queryset: QuerySet[DjangoModelType],
     ) -> dict[str, tp.Any]:
         serializer = serializer_class(queryset, many=True)
         return serializer.data
 
     def get_filtered_queryset(
         self,
-        filter_class: type[DjangoFilter],
-        queryset: QuerySet[DjangoFilter],
-    ) -> QuerySet[DjangoModel]:
+        filter_class: type[DjangoFilterType],
+        queryset: QuerySet[DjangoFilterType],
+    ) -> QuerySet[DjangoModelType]:
         filter = filter_class(
             data=self.data,
             queryset=queryset,
@@ -98,7 +100,7 @@ class APIView(View):
         return self.request.POST | self.request.FILES
 
     @tp.override
-    def get_object(self) -> DjangoModel | None:
+    def get_object(self) -> DjangoModelType | None:
         if self.queryset or self.model:
             return get_object_or_404(
                 self.queryset or self.model,
@@ -117,6 +119,7 @@ class APIView(View):
             response = self.handle_exception(exc)
         return response
 
+    # TODO: check if the request was an API or Template before returning the response
     def handle_exception(self, exception: Exception) -> JsonResponse:
         if isinstance(exception, APIError):
             return self.render_to_json(
