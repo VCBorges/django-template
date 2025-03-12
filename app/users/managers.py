@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import typing as tp
 
 from django.contrib.auth.base_user import BaseUserManager
 from django.db import transaction
@@ -10,7 +10,7 @@ from django.utils.translation import gettext_lazy as _
 
 from allauth.account.models import EmailAddress
 
-if TYPE_CHECKING:
+if tp.TYPE_CHECKING:
     from .models import User
 
 
@@ -34,25 +34,6 @@ class UsersManager(BaseUserManager):
         self._setup_user_email(user)
         return user
 
-    @transaction.atomic
-    def create_superuser(
-        self,
-        email: str,
-        password: str,
-        **extra_fields,
-    ) -> User:
-        extra_fields.setdefault('is_staff', True)
-        extra_fields.setdefault('is_superuser', True)
-        extra_fields.setdefault('is_active', True)
-
-        if extra_fields.get('is_staff') is not True:
-            raise ValidationError(_('Superuser must have is_staff=True.'))
-
-        if extra_fields.get('is_superuser') is not True:
-            raise ValidationError(_('Superuser must have is_superuser=True.'))
-
-        return self.create_user(email, password, **extra_fields)
-
     def _setup_user_email(self, user: User) -> None:
         email_address = EmailAddress(
             user=user,
@@ -75,3 +56,22 @@ class UsersManager(BaseUserManager):
                 raise ValidationError(_('This email is already in use.'))
 
             raise ValidationError(_('Error while saving user.'))
+
+    @transaction.atomic
+    def create_superuser(
+        self,
+        email: str,
+        password: str,
+        **extra_fields,
+    ) -> User:
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+        extra_fields.setdefault('is_active', True)
+
+        if extra_fields.get('is_staff') is not True:
+            raise ValidationError(_('Superuser must have is_staff=True.'))
+
+        if extra_fields.get('is_superuser') is not True:
+            raise ValidationError(_('Superuser must have is_superuser=True.'))
+
+        return self.create_user(email, password, **extra_fields)

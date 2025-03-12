@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import typing as tp
 
-from app.core.types import ErrorDetails
-
 from rest_framework import status
+
+ErrorDetails = dict[str, tp.Any] | str | list[tp.Any]
 
 
 class APIError(Exception):

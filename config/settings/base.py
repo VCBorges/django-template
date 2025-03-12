@@ -152,6 +152,7 @@ ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_USERNAME_REQUIRED = False
 ACCOUNT_LOGIN_METHODS = {'email'}
+ACCOUNT_UNIQUE_EMAIL = True
 
 
 LOGGING = {
@@ -164,10 +165,16 @@ LOGGING = {
     },
     'root': {
         'handlers': ['console'],
-        'level': 'DEBUG',
+        'level': 'INFO',
     },
 }
 
-
 # Django-Cotton
 COTTON_DIR = 'cotton_components'
+
+
+LOGIN_REDIRECT_URL = 'homepage_template'
+
+LOGIN_URL = 'login_template'
+
+LOGOUT_REDIRECT_URL = 'landing_page_template'

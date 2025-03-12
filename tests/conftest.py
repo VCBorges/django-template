@@ -1,20 +1,8 @@
-from django.contrib.sessions.backends.db import SessionStore
-from django.core.handlers.wsgi import WSGIRequest
 from django.test import Client
-from django.test.client import RequestFactory
 
 from app.users.models import User
 
 import pytest
-
-
-@pytest.fixture
-def request() -> WSGIRequest:
-    request = RequestFactory().post('/')
-    request.user = None
-    request.session = SessionStore()
-    request.session.save()
-    return request
 
 
 @pytest.fixture

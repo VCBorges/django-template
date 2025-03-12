@@ -35,6 +35,12 @@ class CreateUserForm(BaseForm, SignupForm):
                 error=forms.ValidationError('This email is already in use.'),
             )
         return email
+    
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        del cleaned_data['password2']
+        return cleaned_data
 
 
 class UpdateUserView(BaseForm):

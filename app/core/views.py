@@ -4,6 +4,7 @@ import json
 import logging
 import typing as tp
 
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models.query import QuerySet
 from django.forms import ValidationError as DjangoValidationError
 from django.http import HttpRequest, JsonResponse, QueryDict
@@ -11,9 +12,16 @@ from django.template.response import TemplateResponse
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
+from django.views.generic import TemplateView
+from django.views.generic.detail import DetailView
 
 from app.core.exceptions import APIError, ValidationError
-from app.core.types import DjangoFilterType, DjangoModelType, DRFSerializerType
+from app.core.types import (
+    AuthenticatedRequest,
+    DjangoFilterType,
+    DjangoModelType,
+    DRFSerializerType,
+)
 from app.core.utils import get_object_or_404
 
 from rest_framework.exceptions import ValidationError as DRFValidationError
@@ -24,10 +32,18 @@ HTTPMethod = tp.Literal['post', 'get', 'put', 'delete']
 
 Response = JsonResponse | TemplateResponse
 
-# class TemplateView
+
+class BaseView(View):
+    pass
 
 
-class APIView(View):
+class BaseTemplateContextMixin(BaseView):
+    def get_context_data(self, **kwargs) -> dict[str, tp.Any]:
+        context = super().get_context_data(**kwargs)
+        return context
+
+
+class APIView(BaseView):
     http_method_names: list[HTTPMethod] = []
     model: type[DjangoModelType] | None = None
     queryset: QuerySet[DjangoModelType] | None = None
@@ -54,7 +70,7 @@ class APIView(View):
                 details=self.error_dict(str(error)),
             )
 
-    def get_validated_body(
+    def get_validated_input(
         self,
         serializer_class: type[DRFSerializerType],
     ) -> dict[str, tp.Any]:
@@ -66,14 +82,6 @@ class APIView(View):
             raise ValidationError(error.detail)
 
         return serializer.validated_data
-
-    def get_serialized_queryset(
-        self,
-        serializer_class: type[DRFSerializerType],
-        queryset: QuerySet[DjangoModelType],
-    ) -> dict[str, tp.Any]:
-        serializer = serializer_class(queryset, many=True)
-        return serializer.data
 
     def get_filtered_queryset(
         self,
@@ -87,11 +95,16 @@ class APIView(View):
         filter.is_valid(raise_exception=True)
         return filter.qs
 
+    def get_serialized_queryset(
+        self,
+        serializer_class: type[DRFSerializerType],
+        queryset: QuerySet[DjangoModelType],
+    ) -> dict[str, tp.Any]:
+        serializer = serializer_class(queryset, many=True)
+        return serializer.data
+
     def get_request_data(self) -> tp.Mapping[str, tp.Any] | QueryDict:
-        if self.request.method in [
-            'GET',
-            'HEAD',
-        ]:
+        if self.request.method in ['GET']:
             return self.request.GET
 
         if self.request.content_type == 'application/json':
@@ -139,6 +152,7 @@ class APIView(View):
                 data=self.error_dict(exception.detail),
             )
 
+        print(f'{exception = }')
         return self.render_to_json(
             status_code=500,
             data=self.error_dict('Server error ocurred.'),
@@ -206,3 +220,54 @@ class CsrfExemptMixin:
     @method_decorator(csrf_exempt)
     def dispatch(self, *args, **kwargs):
         return super().dispatch(*args, **kwargs)
+
+
+class AuthenticatedAPIView(
+    LoginRequiredMixin,
+    APIView,
+    View,
+):
+    request: AuthenticatedRequest
+
+
+class LoggedOutAPIView(
+    CsrfExemptMixin,
+    APIView,
+    View,
+):
+    pass
+
+
+class AuthenticatedTemplateView(
+    LoginRequiredMixin,
+    BaseTemplateContextMixin,
+    TemplateView,
+):
+    request: AuthenticatedRequest
+
+    def get_context_data(self, **kwargs) -> dict[str, tp.Any]:
+        context = super().get_context_data(**kwargs)
+        return context
+
+
+class AuthDetailTemplateView(
+    LoginRequiredMixin,
+    BaseTemplateContextMixin,
+    DetailView,
+):
+    model: DjangoModelType
+
+
+class LoggedOutTemplateView(
+    BaseTemplateContextMixin,
+    TemplateView,
+):
+    def dispatch(self, request, *args, **kwargs):
+        # if self.request.user.is_authenticated:
+        #     redirect_to = reverse_lazy(settings.LOGIN_REDIRECT_URL)
+        #     return HttpResponseRedirect(redirect_to)
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs) -> dict[str, tp.Any]:
+        context = super().get_context_data(**kwargs)
+        return context
