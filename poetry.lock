@@ -248,15 +248,31 @@ socialaccount = ["pyjwt[crypto] (>=1.7)", "requests (>=2.0.0)", "requests-oauthl
 steam = ["python3-openid (>=3.0.8)"]
 
 [[package]]
+name = "django-browser-reload"
+version = "1.18.0"
+description = "Automatically reload your browser in development."
+optional = false
+python-versions = ">=3.9"
+groups = ["dev"]
+files = [
+    {file = "django_browser_reload-1.18.0-py3-none-any.whl", hash = "sha256:ed4cc2fb83c3bf6c30b54107a1a6736c0b896e62e4eba666d81005b9f2ecf6f8"},
+    {file = "django_browser_reload-1.18.0.tar.gz", hash = "sha256:c5f0b134723cbf2a0dc9ae1ee1d38e42db28fe23c74cdee613ba3ef286d04735"},
+]
+
+[package.dependencies]
+asgiref = ">=3.6"
+django = ">=4.2"
+
+[[package]]
 name = "django-cotton"
-version = "1.6.0"
+version = "2.0.0"
 description = "Bringing component based design to Django templates."
 optional = false
 python-versions = "<4,>=3.8"
 groups = ["main"]
 files = [
-    {file = "django_cotton-1.6.0-py3-none-any.whl", hash = "sha256:46452e5fc9ddfff43ac3b10925ba63151e2e9143ffa665a9519178122204b456"},
-    {file = "django_cotton-1.6.0.tar.gz", hash = "sha256:1feb2ab486491f304e701fda82f37e608f0b9874473b3ec92922f3891d1a6cd7"},
+    {file = "django_cotton-2.0.0-py3-none-any.whl", hash = "sha256:3d971321fb5d25733d4a4a96b557e32dd7402783e65bd7ee3c9e8b373e42e96b"},
+    {file = "django_cotton-2.0.0.tar.gz", hash = "sha256:c6e109f5b3cf115cbfafb3824195bb1916613910a919d62e34c276064c58bb8a"},
 ]
 
 [package.dependencies]
@@ -1218,4 +1234,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<4"
-content-hash = "878638b9b8aaf6689923a7067d306b1066494a4cb60a5c5278c497b1f2554db5"
+content-hash = "6c2c05316787b34c0bf76bd047e481fda37623e4ee23256d78e6449017d87eae"

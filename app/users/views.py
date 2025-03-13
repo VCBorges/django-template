@@ -8,7 +8,6 @@ from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
 
-from app.core.exceptions import ValidationError
 from app.core.views import (
     AuthenticatedAPIView,
     AuthenticatedTemplateView,
@@ -85,10 +84,9 @@ class UserCreateView(LoggedOutAPIView):
             self.data,
             request=self.request,
         )
-        if not form.is_valid():
-            raise ValidationError(form.errors)
+        form.is_valid()
 
-        services.create_user(**form.cleaned_data)
+        form.save(self.request)
         return self.render_to_json(
             status_code=201,
             data={
